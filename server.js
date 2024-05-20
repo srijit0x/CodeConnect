@@ -14,7 +14,7 @@ const authenticate = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1] || req.query.token || req.cookies.token;
 
   if (!token) {
-    return res.status(401).send("Access Denied");
+    return res ? res.status(401).send("Access Denied") : console.error("Access Denied: No Token Provided");
   }
 
   try {
@@ -22,7 +22,7 @@ const authenticate = (req, res, next) => {
     req.user = verified;
     next();
   } catch (err) {
-    res.status(400).send("Invalid Token");
+    res ? res.status(400).send("Invalid Token") : console.error("Authentication Error: Invalid Token");
   }
 };
 
@@ -36,6 +36,7 @@ server.on('upgrade', (request, socket, head) => {
 
 wss.on('connection', (ws, req) => {
   if (!req.user) {
+    console.error('Connection Terminated: Authentication Failed');
     return ws.terminate();
   }
 
@@ -49,8 +50,12 @@ wss.on('connection', (ws, req) => {
 
   ws.on('message', (message) => {
     Object.entries(sessions[sessionId].users).forEach(([id, userWs]) => {
-      if (id !== userId) {
-        userWs.send(message);
+      try {
+        if (id !== userId) {
+          userWs.send(message);
+        }
+      } catch (e) {
+        console.error(`Error sending message to user ${id}: ${e.message}`);
       }
     });
   });
@@ -61,6 +66,14 @@ wss.on('connection', (ws, req) => {
       delete sessions[sessionId];
     }
   });
+
+  ws.on('error', err => {
+    console.error(`WebSocket error for user ${userId}: ${err.message}`);
+  });
+});
+
+server.on('error', (err) => {
+  console.error(`Server Error: ${err.message}`);
 });
 
 const PORT = process.env.PORT || 3000;
