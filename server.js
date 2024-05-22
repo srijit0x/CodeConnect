@@ -14,7 +14,13 @@ const authenticate = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1] || req.query.token || req.cookies.token;
 
   if (!token) {
-    return res ? res.status(401).send("Access Denied") : console.error("Access Denied: No Token Provided");
+    if (res) {
+      return res.status(401).send("Access Denied");
+    } else {
+      console.error("Access Denied: No Token Provided");
+      if (req.socket) req.socket.destroy();
+      return;
+    }
   }
 
   try {
@@ -22,14 +28,22 @@ const authenticate = (req, res, next) => {
     req.user = verified;
     next();
   } catch (err) {
-    res ? res.status(400).send("Invalid Token") : console.error("Authentication Error: Invalid Token");
+    if (res) {
+      res.status(400).send("Invalid Token");
+    } else {
+      console.error("Authentication Error: Invalid Token");
+      if (req.socket) req.socket.destroy();
+    }
   }
 };
 
 server.on('upgrade', (request, socket, head) => {
   authenticate(request, null, () => {
-    wss.handleUpgrade(request, socket, head, ws => {
+    wss.handleUpgrade(request, socket, head, (ws) => {
       wss.emit('connection', ws, request);
+    }).on('error', (error) => {
+      console.error("WebSocket handleUpgrade error:", error.message);
+      socket.destroy();
     });
   });
 });
@@ -69,11 +83,24 @@ wss.on('connection', (ws, req) => {
 
   ws.on('error', err => {
     console.error(`WebSocket error for user ${userId}: ${err.message}`);
+    try {
+      ws.terminate();
+    } catch (error) {
+      console.error(`Error terminating WebSocket for user ${userId}: ${error.message}`);
+    }
   });
 });
 
 server.on('error', (err) => {
   console.error(`Server Error: ${err.message}`);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 const PORT = process.env.PORT || 3000;
