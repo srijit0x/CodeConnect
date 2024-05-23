@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 const server = http.createServer(app);
+
 const wss = new WebSocket.Server({ server });
 
 const sessions = {};
