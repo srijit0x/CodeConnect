@@ -16,28 +16,39 @@ const CodeEditor: React.FC = () => {
   const editorRef = useRef<any>(null);
   const socketRef = useRef<any>(null);
 
-  const handleEditorDidMount: OnMount = (editor, monaco) => {
-    editorRef.current = editor;
-    
-    const debouncedChangeHandler = debounce((newCode) => {
-      setCode(newCode);
-      socketRef.current.emit('codeChange', { newCode });
-    }, 500);
+  // Debounce code update function
+  const handleCodeUpdate = debounce((newCode: string) => {
+    setCode(newCode);
+    socketRef.current.emit('codeChange', { newCode });
+  }, 500);
 
+  // Editor configuration and event handling
+  const configureEditor = (editor: any) => {
     editor.onDidChangeModelContent(() => {
       const newCode = editor.getValue();
-      debouncedChangeHandler(newCode);
+      handleCodeUpdate(newCode);
+    });
+  };
+
+  // Handler to perform actions when the editor is mounted
+  const handleEditorDidMount: OnMount = (editor, monaco) => {
+    editorRef.current = editor;
+    configureEditor(editor);
+  };
+
+  // Initialize socket connection and handle incoming code changes
+  const initializeSocketConnection = () => {
+    socketRef.current = io(SOCKET_IO_SERVER);
+    socketRef.current.on('codeChange', (data: { newCode: string }) => {
+      const { newCode } = data;
+      if (newCode !== code) {
+        editorRef.current.setValue(newCode);
+      }
     });
   };
 
   useEffect(() => {
-    socketRef.current = io(SOCKET_IO_SERVER);
-    socketRef.current.on('codeChange', (data: { newCode: string }) => {
-      if (data.newCode !== code) {
-        editorRef.current.setValue(data.newCode);
-      }
-    });
-    
+    initializeSocketConnection();
     return () => {
       socketRef.current.disconnect();
     };
