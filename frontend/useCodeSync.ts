@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 interface CodeUpdate {
   userId: string;
   content: string;
-  type: 'codeUpdate' | 'broadcast';
+  type: 'codeUpdate' | 'broadcast' | 'userJoined' | 'userLeft';
 }
 
 function useCodeSync(url: string, roomId: string, userId: string) {
@@ -11,6 +11,7 @@ function useCodeSync(url: string, roomId: string, userId: string) {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const ws = useRef<WebSocket | null>(null);
   const [reconnectAttempts, setReconnectAttempts] = useState<number>(0);
+  const [participants, setParticipants] = useState<string[]>([]); 
 
   useEffect(() => {
     connect();
@@ -35,6 +36,16 @@ function useCodeSync(url: string, roomId: string, userId: string) {
           
           if (message.type === 'broadcast') {
             console.log('Broadcast message received:', message.content);
+          }
+          
+          if (message.type === 'userJoined') {
+            console.log('User joined:', message.userId);
+            setParticipants((prevParticipants) => [...prevParticipants, message.userId]);
+          }
+
+          if (message.type === 'userLeft') {
+            console.log('User left:', message.userId);
+            setParticipants((prevParticipants) => prevParticipants.filter(user => user !== message.userId));
           }
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
@@ -63,7 +74,7 @@ function useCodeSync(url: string, roomId: string, userId: string) {
         if (ws.current?.readyState === WebSocket.OPEN) {
           ws.current.send(JSON.stringify({ type: 'heartbeat' }));
         } else {
-           console.error('Attempting to send heartbeat but WebSocket is not open.');
+          console.error('Attempting to send heartbeat but WebSocket is not open.');
         }
       } catch (error) {
         console.error('Error sending heartbeat:', error);
@@ -79,7 +90,7 @@ function useCodeSync(url: string, roomId: string, userId: string) {
           connect();
         }, 5000);
       } else {
-          console.error('Max reconnection attempts reached.');
+        console.error('Max reconnection attempts reached.');
       }
     }
 
@@ -98,7 +109,7 @@ function useCodeSync(url: string, roomId: string, userId: string) {
         };
         ws.current.send(JSON.stringify(update));
       } else {
-          console.warn('Attempting to send update but WebSocket is not open.');
+        console.warn('Attempting to send update but WebSocket is not open.');
       }
     } catch (error) {
       console.error('Error sending update:', error);
@@ -114,7 +125,15 @@ function useCodeSync(url: string, roomId: string, userId: string) {
     sendUpdate(message, 'broadcast');
   };
 
-  return { code, updateCode, isConnected, broadcastMessage };
+  const notifyUserJoined = (userId: string) => {
+    sendUpdate(userId, 'userJoined');
+  };
+
+  const notifyUserLeft = (userId: string) => {
+    sendUpdate(userId, 'userLeft');
+  };
+
+  return { code, updateCode, isConnected, broadcastMessage, participants, notifyUserJoined, notifyUserLeft };
 }
 
 export default useCodeSync;
