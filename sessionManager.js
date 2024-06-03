@@ -9,6 +9,9 @@ class CodingSessionManager extends EventEmitter {
     }
 
     createSession(userID) {
+        // Simple validation for userID, more complex validation logic might be necessary depending on requirements
+        if (!userID) throw new Error('Invalid userID');
+
         const sessionID = uuidv4();
         this.sessions[sessionID] = {
             users: [userID],
@@ -19,20 +22,36 @@ class CodingSessionManager extends EventEmitter {
     }
 
     joinSession(sessionID, userID) {
-        if (!this.sessions[sessionID]) {
-            throw new Error('Session does not exist');
-        }
-        this.sessions[sessionID].users.push(userID);
-        this.emit('userJoined', sessionID, userID);
-    }
+        if (!sessionID || !userID) throw new Error('Invalid sessionID or userID');
 
-    leaveSession(sessionID, userID) {
         const session = this.sessions[sessionID];
         if (!session) {
             throw new Error('Session does not exist');
         }
-        this.sessions[sessionID].users = session.users.filter(user => user !== userID);
-        if (this.sessions[sessionID].users.length === 0) {
+        // Preventing the same user from joining the session multiple times.
+        if (session.users.includes(userID)) {
+            throw new Error('User already in session');
+        }
+        session.users.push(userID);
+        this.emit('userJoined', sessionID, userID);
+    }
+
+    leaveSession(sessionID, userID) {
+        if (!sessionID || !userID) throw new Error('Invalid sessionID or userID');
+
+        const session = this.sessions[sessionID];
+        if (!session) {
+            throw new Error('Session does not exist');
+        }
+        const initialLength = session.users.length;
+        session.users = session.users.filter(user => user !== userID);
+
+        // If the filtered length is the same, the user was not in the session
+        if (initialLength === session.users.length) {
+            throw new Error('User not found in session');
+        }
+
+        if (session.users.length === 0) {
             delete this.sessions[sessionID];
             this.emit('sessionEnded', sessionID);
         } else {
@@ -41,31 +60,11 @@ class CodingSessionManager extends EventEmitter {
     }
 
     editSession(sessionID, edit) {
-        if (!this.sessions[sessionID]) {
+        if (!sessionID || !edit) throw new Error('Invalid sessionID or edit');
+
+        const session = this.sessions[sessionID];
+        if (!session) {
             throw new Error('Session does not exist');
         }
-        this.sessions[sessionID].edits.push(edit);
+        session.edits.push(edit);
         this.emit('editMade', sessionID, edit);
-        this.mergeEdits(sessionID);
-    }
-
-    mergeEdits(sessionID) {
-        // Simplified merge function, depending on the coding language, more sophisticated merge strategies might be required
-        const edits = this.sessions[sessionID].edits;
-        if (edits.length > 1) {
-            const mergedEdit = edits.reduce((acc, cur) => acc + "\n" + cur);
-            this.sessions[sessionID].edits = [mergedEdit];
-            this.emit('editsMerged', sessionID, merged *(digits/probably not)*it);
-        }
-    }
-
-    getSession(sessionID) {
-        return this.sessions[sessionID];
-    }
-
-    getAllSessions() {
-        return this.sessions;
-    }
-}
-
-module.exports = CodingSessionManager;
