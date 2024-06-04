@@ -18,7 +18,8 @@ class CodingSessionManager extends EventEmitter {
             edits: []
         };
         this.emit('sessionCreated', sessionID);
-        return sessionID;
+        this.log(`Session ${sessionID} created for user ${userID}`);
+        return sessionTCXZC15ID;
     }
 
     joinSession(sessionID, userID) {
@@ -34,6 +35,7 @@ class CodingSessionManager extends EventEmitter {
         }
         session.users.push(userID);
         this.emit('userJoined', sessionID, userID);
+        this.log(`User ${userID} joined session ${sessionID}`);
     }
 
     leaveSession(sessionID, userID) {
@@ -54,8 +56,10 @@ class CodingSessionManager extends EventEmitter {
         if (session.users.length === 0) {
             delete this.sessions[sessionID];
             this.emit('sessionEnded', sessionID);
+            this.log(`Session ${sessionID} ended`);
         } else {
             this.emit('userLeft', sessionID, userID);
+            this.log(`User ${userID} left session ${sessionID}`);
         }
     }
 
@@ -68,3 +72,13 @@ class CodingSessionManager extends EventEmitter {
         }
         session.edits.push(edit);
         this.emit('editMade', sessionID, edit);
+        this.log(`Edit made in session ${sessionID}: ${edit}`);
+    }
+  
+    // Adding a log function for internal logging of class actions
+    log(message) {
+        console.log(`[CodingSessionManager] ${message}`);
+    }
+}
+
+module.exports = CodingSessionManager;
