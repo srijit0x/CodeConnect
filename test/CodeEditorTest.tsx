@@ -8,7 +8,7 @@ process.env.REACT_APP_COLLABORATION_SERVICE_URL = 'https://mock-collaboration-se
 
 describe('CodeEditor Component Tests', () => {
 
-  test('renders without crashing', () => {
+  test('renders CodeEditor component successfully', () => {
     const { getByTestId } = render(
       <EnvironmentProvider>
         <CodeEditor />
@@ -17,32 +17,32 @@ describe('CodeEditor Component Tests', () => {
     expect(getByTestId('code-editor')).toBeInTheDocument();
   });
 
-  test('handles user input correctly', async () => {
+  test('updates code input field based on user typing', async () => {
     const { getByTestId } = render(
       <EnvironmentProvider>
         <CodeEditor />
       </EnvironmentProvider>
     );
-    const codeInput = getByTestId('code-input');
-    fireEvent.change(codeInput, { target: { value: 'console.log("Hello, World!")' } });
-    expect(codeInput.value).toBe('console.log("Hello, World!")');
+    const codeEditorInput = getByTestId('code-input');
+    fireEvent.change(codeEditorInput, { target: { value: 'console.log("Hello, World!")' } });
+    expect(codeEditorInput.value).toBe('console.log("Hello, World!")');
   });
 
-  test('sends updates on user input for real-time collaboration', async () => {
-    const mockSendUpdate = jest.fn();
-    CodeEditor.prototype.sendUpdate = mockSendUpdate;
+  test('broadcasts code edits for collaborative editing feature', async () => {
+    const mockBroadcastCodeEdit = jest.fn();
+    CodeEditor.prototype.broadcastCodeEdit = mockBroadcastCodeEdit;
 
     const { getByTestId } = render(
       <EnvironmentProvider>
         <CodeEditor />
       </EnvironmentProvider>
     );
-    const codeInput = getByTestId('code-input');
-    fireEvent.change(codeInput, { target: { value: 'console.log("Test")' } });
-    await waitFor(() => expect(mockSendNumber).toHaveBeenCalledWith('console.log("Test")'));
+    const codeEditorInput = getByTestId('code-input');
+    fireEvent.change(codeEditorFilter, { target: { value: 'console.log("Test")' } });
+    await waitFor(() => expect(mockBroadcastCodeEdit).toHaveBeenCalledWith('console.log("Test")'));
   });
 
-  test('integrates with collaboration service using environment variable', () => {
+  test('checks collaboration service URL configuration', () => {
     expect(process.env.REACT_APP_COLLABORATION_SERVICE_URL).toBe('https://mock-collaboration-service.com');
   });
 
