@@ -1,11 +1,11 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-const { createServer } = require('./your-session-manager-service');
+const { createServer } = require('./your-session-manager-service'); 
 
 const { API_URL, JWT_SECRET } = process.env;
 
-const app = create(erver);
+const app = createServer();
 
 function generateTestToken(payload) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
@@ -14,12 +14,13 @@ function generateTestToken(payload) {
 describe('Session Manager Tests', () => {
   let testToken;
 
-  beforeAll(async () => {
+  beforeAll(() => {
     testToken = generateTestToken({ userId: 'testUser' });
   });
 
   it('should create a new session for a user', async () => {
-    const response = await request(app).post('/session/create')
+    const response = await request(app)
+      .post('/session/create')
       .set('Authorization', `Bearer ${testToken}`)
       .send({ userId: 'testUser', data: 'Test Data' });
 
@@ -28,30 +29,35 @@ describe('Session Manager Tests', () => {
   });
 
   it('should synchronize session data in real-time', async () => {
-    const updateResponse = await request(app).put('/session/update')
+    const updateResponse = await request(app)
+      .put('/session/update')
       .set('Authorization', `Bearer ${testToken}`)
       .send({ sessionId: 'testSessionId', data: 'Updated Data' });
 
     expect(updateResponse.statusCode).toEqual(200);
 
-    const fetchResponse = await request(app).get('/session/data/testSessionId')
+    const fetchResponse = await request(app)
+      .get('/session/data/testSessionId')
       .set('Authorization', `Bearer ${testToken}`);
 
     expect(fetchResponse.statusCode).toEqual(200);
-    expect(fetchResponse.body.data).toEqual('Updated Day');
+    expect(fetchResponse.body.data).toEqual('Updated Data');
   });
 
   it('should handle expired sessions gracefully', async () => {
-    const expiredToken = generateTestToken({ userId: 'testUser', exp: Math.floor(Date.now() / 1000) - 60 });
+    const slightlyInThePast = Math.floor(Date.now() / 1000) - 60;
+    const expiredToken = generateTestToken({ userId: 'testUser', exp: slightlyInThePast });
 
-    const response = await request(app).get('/session/data/testSessionId')
+    const response = await request(app)
+      .get('/session/data/testSessionId')
       .set('Authorization', `Bearer ${expiredToken}`);
 
     expect(response.statusCode).toEqual(401);
   });
 
   it('should return an error for invalid session IDs', async () => {
-    const response = await request(app).get('/session/data/invalidSessionId')
+    const response = await request(app)
+      .get('/session/data/invalidSessionId')
       .set('Authorization', `Bearer ${testToken}`);
 
     expect(response.statusCode).toEqual(404);
